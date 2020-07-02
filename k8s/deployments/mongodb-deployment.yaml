@@ -1,0 +1,81 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mongodb-deployment
+spec:
+  serviceName: mongodb
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mongodb
+  template:
+    metadata:
+      labels:
+        app: mongodb
+        selector: mongodb-deployment
+    spec:
+      terminationGracePeriodSeconds: 60
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: failure-domain.beta.kubernetes.io/zone
+                operator: In
+                values:
+                - us-east-1a
+                - us-east-1b
+      initContainers:
+      - name: "resolve-ebs-mongodb-perms-issue"
+        image: "busybox"
+        imagePullPolicy: Always
+        command: ["sh", "-c", "mkdir -p /bitnami/mongodb /opt/bitnami && chown -R 1001:1001 /bitnami/mongodb /opt/bitnami"]
+        volumeMounts:
+        - name: mongodb-data
+          mountPath: /bitnami/mongodb
+      containers:
+      - name: mongodb-deployment
+        image: 368040456386.dkr.ecr.us-east-1.amazonaws.com/mongodb:latest
+        imagePullPolicy: Always
+        env:
+          - name: MONGODB_ROOT_PASSWORD
+            valueFrom:
+                secretKeyRef:
+                    name: mongodb-secrets
+                    key: MONGODB_ROOT_PASSWORD
+          - name: MONGODB_USERNAME
+            valueFrom:
+                secretKeyRef:
+                    name: mongodb-secrets
+                    key: MONGODB_USERNAME
+          - name: MONGODB_PASSWORD
+            valueFrom:
+                secretKeyRef:
+                    name: mongodb-secrets
+                    key: MONGODB_PASSWORD
+          - name: MONGODB_DATABASE
+            valueFrom:
+                secretKeyRef:
+                    name: mongodb-secrets
+                    key: MONGODB_DATABASE
+        ports:
+            - name: mongoport
+              containerPort: 27017
+        readinessProbe:
+            tcpSocket:
+                port: 27017
+            initialDelaySeconds: 300
+            periodSeconds: 180
+        volumeMounts:
+        - name: mongodb-data
+          mountPath: /bitnami/mongodb
+  volumeClaimTemplates:
+  - metadata:
+        name: mongodb-data
+    spec:
+        storageClassName: "mongodb-storage"
+        accessModes: 
+            - ReadWriteOnce
+        resources:
+            requests:
+                storage: 30Gi

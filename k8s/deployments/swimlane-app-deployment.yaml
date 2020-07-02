@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: swimlane-app-deployment
+  labels:
+    app: swimlane-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: swimlane-app
+  template:
+    metadata:
+      labels:
+        app: swimlane-app
+    spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - swimlane-app
+            topologyKey: "kubernetes.io/hostname"
+      containers:
+      - name: swimlane-app
+        image: 368040456386.dkr.ecr.us-east-1.amazonaws.com/swimlane_app:latest
+        env: 
+        - name: MONGODB_URL
+          valueFrom:
+            secretKeyRef:
+              name: swimlane-app-secrets
+              key: MONGODB_URL
+        ports:
+          - name: slport
+            containerPort: 3000
+        readinessProbe:
+          tcpSocket:
+            port: 3000
+          initialDelaySeconds: 180
+          periodSeconds: 30
+        livenessProbe:
+          httpGet:
+            path: /
+            port: slport
+          failureThreshold: 5
+          periodSeconds: 180

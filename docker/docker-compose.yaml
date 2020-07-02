@@ -1,0 +1,26 @@
+version: '3'
+
+services:
+    swimlane_app:
+        image: swimlane_app:latest
+        ports:
+            - 3000:3000
+        environment:
+            MONGODB_URL: 'mongodb://swimlane:pass123@mongodb:27017/database'
+        depends_on:
+            - mongodb
+        networks:
+            - swimnet
+    mongodb:
+        image: bitnami/mongodb:latest
+        environment:
+            MONGODB_ROOT_PASSWORD: "root123"
+            MONGODB_USERNAME: "swimlane"
+            MONGODB_PASSWORD: "pass123"
+            MONGODB_DATABASE: "database"
+        networks:
+            - swimnet
+
+networks:
+    swimnet:
+        driver: bridge
