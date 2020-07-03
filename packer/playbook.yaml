@@ -1,0 +1,9 @@
+- name: 'Install NTP Package'
+  hosts: default
+  become: true
+
+  tasks:
+    - name: Install NTPD
+      yum:
+        name: "ntp"
+        state: latest
